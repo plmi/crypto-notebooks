@@ -15,17 +15,17 @@ def md5(password, constant) -> str:
     m.update(str.encode(password + constant))
     return m.hexdigest()
 
-def bruteforce_md5(expected_digest: str, constant: str) -> str:
+def bruteforce_lm_hash(expected_digest: str, constant: str) -> str:
   """
   Break one-way function of weak custom hash implementation with a given constant
   The password must be numeric and always 7 byte long padded with zeros
   """
-  for i in range(9999999+1):
+  for i in range(10**7):
     padded_password_candidate: str = str(i).ljust(7, '0')
     digest_candidate: str = md5(padded_password_candidate, constant)
     if digest_candidate[:16] == expected_digest:
       return padded_password_candidate
-  return ''
+  raise ValueError(f'No valid password candiate found for {expected_digest}')
 
 def bruteforce(lm_hash: str, constant: str) -> None:
   """
@@ -33,8 +33,8 @@ def bruteforce(lm_hash: str, constant: str) -> None:
   """
   lm_hash_part_1: str = lm_hash[:16]
   lm_hash_part_2: str = lm_hash[16:]
-  password_candidate_part_1: str = bruteforce_md5(lm_hash_part_1, constant)
-  password_candidate_part_2: str = bruteforce_md5(lm_hash_part_2, constant)
+  password_candidate_part_1: str = bruteforce_lm_hash(lm_hash_part_1, constant)
+  password_candidate_part_2: str = bruteforce_lm_hash(lm_hash_part_2, constant)
   return f'{password_candidate_part_1}{password_candidate_part_2}'.ljust(14, '0')
 
 constant: str = 'NetSec1'
