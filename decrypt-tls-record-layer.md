@@ -2,7 +2,7 @@
 
 Used cipher suite: `TLS_RSA_WITH_AES_256_CBC_SHA`
 
-## Extract keys from key block
+### Extract keys from key block
 
 Key block:
 ```text
@@ -20,10 +20,9 @@ DC 92 43 8A 3E 20 B7 A2 85 51 3A FD ED 34 27 BD
 * server\_write\_key: `CE732738D7810269DC92438A3E20B7A285513AFDED3427BD037E6916FB18A4FA` (32)
 
 
-## Extract IV and cipher text
+### Extract IV and cipher text
 
-### TLSv1.2 Record Layer: Handshake Protocol: Encrypted Handshake Message
-
+TLSv1.2 Record Layer: Handshake Protocol: Encrypted Handshake Message
 ```text
 0000   16 03 03 00 40 0e e1 bc 7e c3 ef 29 7a 9c cb 45
 0010   6f 21 49 e0 11 b9 b6 f1 f3 9a 5f 85 1e 62 d0 77
@@ -45,9 +44,7 @@ Structure of record layer: `Record Header || IV || Enc(DATA || MAC || PADDING)`
 0020   60 bc 93 52 37 74 b2 6c 21 92 8c 52 86 fd 4a 97
 ```
 
-
-
-## Decrypt record layer
+### Decrypt record layer
 
 Decrypt cipher text with openssl
 ```bash
@@ -75,14 +72,14 @@ echo -ne '\xb9\xb6\xf1\xf3\x9a\x5f\x85\x1e\x62\xd0\x77\xc8\x3d\x17\x81\xec\x02\x
 
 Decrypted record layer: `1400000c2d6e6c3e0a641f610e42aa5a0a5c2a7870ff3799b89df1c465f8a85e3c3d9a960b0b0b0b0b0b0b0b0b0b0b0b`
 
-**Determine padding bytes**
+### Determine padding bytes
 
 See: https://github.com/tls-attacker/TLS-Padding-Oracles/issues/5
 > in TLS the last padding byte is equal to the number of the remaining padding bytes
 
 So `0b` means 11 padding bytes remaining. Padding: `0b0b0b0b0b0b0b0b0b0b0b0b`
 
-**Determine length of MAC**
+### Determine length of MAC
 
 The hash function used to calculate the MAC is SHA(-1) according to the cipher suite: `TLS_RSA_WITH_AES_256_CBC_SHA`.  
 According to [RFC 5246](https://www.ietf.org/rfc/rfc5246.txt) the length of the MAC should be 20 bytes:
@@ -97,15 +94,18 @@ SHA256    HMAC-SHA256     32            32
 
 MAC: `0a5c2a7870ff3799b89df1c465f8a85e3c3d9a96`
 
-**Analyze decrypted plaintext**
+### Analyze decrypted plaintext
 
 The format of the record layer is: `Enc(DATA || MAC || PADDING)`  
 When we eliminate MAC + PADDING the decrypted plaintext data is: `1400000c2d6e6c3e0a641f610e42aa5a`  
 It represents a handshake message (the client finished message).
 
-Inside a record layer each handshake message begins with a `Handshake type`. In that case it is `0x14` = `20` = `finished`. See: https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-7
+Inside a record layer each handshake message begins with a `Handshake type`. In that case it is `0x14` = `20` = `finished`.  
+See: https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-7
 
-**Extract verify\_data from decrypted client finished message**
+![Handshake Type](./handshaketype.png)
+
+### Extract verify\_data from decrypted client finished message
 
 Structure of client finished message:
 * Handshake Type: `14` (1)
@@ -113,5 +113,17 @@ Structure of client finished message:
 * verify\_data: `2d6e6c3e0a641f610e42aa5a` (12)
 
 
+### Decrypt application data
 
-![Handshake Type](./handshaketype.png)
+Encrypted application data: `4bf0b54023c29b624de9ef9c2f931efc16cebe24016e72c1c923898e5f87f161dd663c08c3ba2ad9df837231d2ea054a076c136edaec8abef45750f67d7c2575e294ef29173b8072d6c35b095dc2f0ea758bff2425e57b00ae7236ad16bade9e`
+
+IV: `4bf0b54023c29b624de9ef9c2f931efc`  
+Cipher text: `16cebe24016e72c1c923898e5f87f161dd663c08c3ba2ad9df837231d2ea054a076c136edaec8abef45750f67d7c2575e294ef29173b8072d6c35b095dc2f0ea758bff2425e57b00ae7236ad16bade9e`
+
+The message was sent from server to client so we need the `server\_write\_key`.
+
+```bash
+echo -ne '\x16\xce\xbe\x24\x01\x6e\x72\xc1\xc9\x23\x89\x8e\x5f\x87\xf1\x61\xdd\x66\x3c\x08\xc3\xba\x2a\xd9\xdf\x83\x72\x31\xd2\xea\x05\x4a\x07\x6c\x13\x6e\xda\xec\x8a\xbe\xf4\x57\x50\xf6\x7d\x7c\x25\x75\xe2\x94\xef\x29\x17\x3b\x80\x72\xd6\xc3\x5b\x09\x5d\xc2\xf0\xea\x75\x8b\xff\x24\x25\xe5\x7b\x00\xae\x72\x36\xad\x16\xba\xde\x9e' | openssl enc -nopad -d -aes-256-cbc -K ce732738d7810269dc92438a3e20b7a285513afded3427bd037e6916fb18a4fa -iv 4bf0b54023c29b624de9ef9c2f931efc
+A pirate I was meant to be, trim the sails and roam the seaI{
+7S?rz0`%
+```
