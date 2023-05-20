@@ -1,6 +1,7 @@
 # Decrypt TLS Record Layer
 
-Used cipher suite: `TLS_RSA_WITH_AES_256_CBC_SHA`
+Used cipher suite: `TLS_RSA_WITH_AES_256_CBC_SHA`  
+Captured Handshake: [handshake.pcapng](./handshake.pcapng)
 
 ### Extract keys from key block
 
